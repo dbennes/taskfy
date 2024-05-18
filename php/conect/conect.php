@@ -1,9 +1,9 @@
 <?php
 
-    $servidor = "localhost";
-    $usuario = "root";
+    $servidor = "";
+    $usuario = "";
     $senha = "";
-    $banco = "taskeasy";
+    $banco = "";
     $conecta = mysqli_connect($servidor, $usuario, $senha, $banco) or die ("Não foi possivel conectar.");
     mysqli_set_charset($conecta, 'utf8');
 
