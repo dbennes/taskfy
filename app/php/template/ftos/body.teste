@@ -1,0 +1,1002 @@
+<div class="container-fluid">
+    <div class="card shadow">
+        <div class="card-header py-3">
+            <p class=" m-0 fw-bold">FOLHAS TAREFAS</p>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-2">
+                    <label for="itemsPerPage">Itens por página:</label>
+                    <select id="itemsPerPage" class="form-select">
+                        <option value="5">5</option>
+                        <option value="10" selected>10</option>
+                        <option value="20">20</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="filterInput">Filtrar:</label>
+                    <input type="text" id="filterInput" class="form-control">
+                </div>
+            </div>
+            <div class="table-responsive table mt-2" id="dataTable" role="grid" aria-describedby="dataTable_info">
+                <table class="table my-0" id="dataTable">
+                    <thead style="font-size: 12px;">
+                        <tr>
+                            <th class="text-center justify-content-center align-items-center"></th>
+                            <th>FOLHA TAREFA</th>
+                            <th>DISCIPLINA</th>
+                            <th>UNIDADE</th>
+                            <th>SOP</th>
+                            <th></th>
+                            
+                        </tr>
+                    </thead>
+                    <tbody style="font-size: 12px;">
+                    <?php
+                        // Incluir a classe Dompdf
+                        require '../vendor/autoload.php';
+
+                        // Criar uma instância do Dompdf
+                        use Dompdf\Dompdf;
+                        use Picqer\Barcode\BarcodeGeneratorPNG;
+
+                        //AQUI PEGO OS DADOS DAS FOLHAS QUE FORAM CRIADAS E ESTAO DENTRO DA PASTA
+                        $diretorio_fts = "folha_tarefas/";
+                        $pasta_folha_tarefas = scandir($diretorio_fts);
+
+                        $folha_tarefas = [];
+
+                        // Percorrer os arquivos da pasta de folhas de tarefas
+                        foreach ($pasta_folha_tarefas as $folhas_criadas) {
+                            $nome_arquivo_sem_extensao = pathinfo($folhas_criadas, PATHINFO_FILENAME);
+                            array_push($folha_tarefas, $nome_arquivo_sem_extensao);
+                        }
+
+                        // Remover duplicatas do array $folha_tarefas
+                        $folha_tarefas = array_unique($folha_tarefas);
+
+                        //LISTA
+                        $GetDados = ("SELECT * FROM ftos ");
+                        $GetDadosquery = mysqli_query($conecta, $GetDados) or die ("Não foi possivel conectar.");
+
+                        // Filtrar o resultado se houver um filtro
+                        if (!empty($_GET['filtro'])) {
+                            $filtro = mysqli_real_escape_string($conecta, $_GET['filtro']);
+                            $GetDados .= "WHERE FOLHA_TAREFA LIKE '%$filtro%' OR DISCIPLINA LIKE '%$filtro%' OR UNIDADE LIKE '%$filtro%' OR SOP LIKE '%$filtro%'";
+                            $GetDadosquery = mysqli_query($conecta, $GetDados) or die ("Não foi possível conectar.");
+                        }
+
+                        $row = mysqli_num_rows($GetDadosquery);
+
+                        // Array para armazenar as folhas de tarefa já exibidas
+                        $folhas_exibidas = [];
+
+                        // Se houver um filtro, a página atual é definida como 1
+                        if (!empty($_GET['filtro'])) {
+                            $currentPage = 1;
+                        }
+
+                        if ($row > 0) {
+                            while ($GetDadosline = mysqli_fetch_array($GetDadosquery)) {
+                                $FTOS = $GetDadosline ['FOLHA_TAREFA'];
+                                $DISCIPLINA = $GetDadosline ['DISCIPLINA'];
+                                $UNIDADE = $GetDadosline ['UNIDADE'];
+                                $SOP = $GetDadosline ['SOP'];
+
+                                // Aplica o filtro aos dados antes de verificar se eles foram exibidos anteriormente
+                                if (empty($_GET['filtro']) || stripos($FTOS, $_GET['filtro']) !== false) {
+                                    // Verifica se a folha de tarefa já foi exibida anteriormente
+                                    if (!in_array($FTOS, $folhas_exibidas)) {
+                                        // Adiciona a folha de tarefa ao array de folhas exibidas
+                                        $folhas_exibidas[] = $FTOS;
+                        ?>
+                                <tr>
+                                    <td><input type="checkbox" /></td>
+                                    <td><?php echo $FTOS; ?></td>
+                                    <td><?php echo $DISCIPLINA; ?></td>
+                                    <td><?php echo $UNIDADE; ?></td>
+                                    <td><?php echo $SOP; ?></td>
+                                    <?php if (in_array($FTOS, $folha_tarefas)) { ?>
+                                        <td class="text-center">
+                                            <a href="<?php echo "folha_tarefas/". $FTOS.".pdf"; ?>" target="_blank" style="background: rgb(255,255,255);border-style: none; font-size: 15px;">
+                                                <svg class="bi bi-file-earmark-arrow-down-fill" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16" style="color: rgb(213 14 14)">
+                                                    <path d="M9.293 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.707A1 1 0 0 0 13.707 4L10 .293A1 1 0 0 0 9.293 0M9.5 3.5v-2l3 3h-2a1 1 0 0 1-1-1m-1 4v3.793l1.146-1.147a.5.5 0 0 1 .708.708l-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 0 1 .708-.708L7.5 11.293V7.5a.5.5 0 0 1 1 0"></path>
+                                                </svg>  
+                                            </a>
+                                        </td>
+                                    <?php } else { ?>
+                                        <td>
+                                            <i class="fas fa-clipboard-list d-flex d-xxl-flex justify-content-center align-items-center justify-content-xxl-center align-items-xxl-center" style="font-size: 16px; color: #afadad"></i>
+                                        </td>
+                                    <?php } ?>
+                                </tr>
+                        <?php
+                                    }
+                                }
+                            }
+                        }
+                        ?>
+                    </tbody>
+                </table>
+
+                <div class="row mt-3">
+                <div class="col-md-6 align-self-center">
+                    <p id="dataTable_info" class="dataTables_info" role="status" aria-live="polite">Mostrando <span id="showingRange"></span> de <span id="totalItems"></span></p>
+                </div>
+                <div class="col-md-6">
+                    <nav class="d-lg-flex justify-content-lg-end dataTables_paginate paging_simple_numbers">
+                        <ul class="pagination">
+                            <!-- Os botões de página serão adicionados dinamicamente aqui -->
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+<?php
+
+
+//FUNÇÃO PARA GERAR AS SMAS
+
+function gerarSMA($dados, $conecta) {
+
+    $FOLHA_TAREFA = $dados['FOLHA_TAREFA'];
+    $CLIENTE = $dados['CLIENTE'];
+    $PROJETO = $dados['PROJETO'];
+    $CONTRATO = $dados['CONTRATO'];
+    $UNIDADE = $dados['UNIDADE'];
+    $SOP = $dados['SOP'];
+    $SSOP = $dados['SSOP'];
+    $PPU = $dados['PPU'];
+    $GEP = $dados['GEP'];
+    $ACTIVITY_ID = $dados['ACTIVITY_ID'];
+
+    $RESPONSAVEL = $dados['RESPONSAVEL'];
+    $DISCIPLINA = $dados['DISCIPLINA'];
+    $TAREFA = $dados['TAREFA'];
+
+    $dompdf = new Dompdf();
+
+    // Carrega a parte estática do HTML
+    $modelo_html1 = '
+                        <!DOCTYPE html>
+                            <html lang="pt-br">
+                            <head>
+                                <meta charset="UTF-8">
+                                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                <title>Documento PDF</title>
+                                <style>
+                                    body {
+                                        font-family: Arial, sans-serif;
+                                        margin-top: 0cm;
+                                        margin-left: 1cm;
+                                        margin-right: 1cm;
+                                        margin-bottom: 0cm;
+                                    }
+                                    table {
+                                        width: 100%;
+                                        border-collapse: collapse;
+                                    }
+                                    th, td {
+                                        border: 1px solid #5a5a5a;
+                                        text-align: left;
+                                        padding: 4px;
+                                    }
+                                    th {
+                                        background-color: #e5e5e5;
+                                    }
+                                    
+                                    @page {
+                                        margin: 0cm 0cm;
+                                        margin-top: 10px;
+                                        margin-bottom: 100px; /* Defina a altura do rodapé aqui */
+                                    }
+                                    footer {
+                                        position: fixed; 
+                                        
+                                        bottom:  -80px; 
+                                        left: 35px; 
+                                        right:  35px;
+                                        
+
+                                        /** Extra personal styles **/
+                                        
+                                        color: white;
+                                        text-align: center;
+                                        
+                                        
+                                    
+                                    }
+                                </style>
+                                </style>
+                            </head>
+                            <body style="font-size: 9px">
+
+                            <header>
+                                <table>
+                                    <tbody>
+                                        <tr style="height: 100px;">
+                                            <td style="width: 33%;">
+                                                <img src="../vendor/dompdf/dompdf/src/Image/toyo.jpg" style="height: 70px; margin-left: 40px" />
+                                            </td>
+                                            <td style="width: 33%; text-align: center; font-size: 12px">
+                                                SOLICITAÇÃO DE MATERIAIS
+                                                <br/>
+                                                <div style="font-size: 8px">TOTAL SUSTAINABLE ENGINEERING</div>
+                                            </td>
+                                            <td style="width: 33%; text-align: center">
+                                                <div style="width: 100%; text-align: left;font-size: 12px">SMA</div>
+                                                <div style="width: 100%; text-align: center; font-size: 15px">{{FTO}}</div>
+                                                <div style="width: 100%; text-align: left">Rev.0</div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </header>
+
+                            <footer style="color: black;">
+                            <table ">
+                                <tbody>
+                                    <tr>
+                                        <td style="width: 70%;">
+                                            <img src="../vendor/dompdf/dompdf/src/Image/'.$FOLHA_TAREFA.'.png" style="width: 60%; margin-left: 100px; height: 50px" />
+                                            <div style="width: 100%; text-align: center">'.$FOLHA_TAREFA.'</div>
+                                        </td>
+                                        <td >
+                                            <div style="width: 100%; text-align: left;font-size: 12px">RECEBIDO POR: </div><br/>
+                                            <div style="width: 100%; text-align: left">DATA:  _____/_____/_____</div>
+                                            <br/>
+                                            <div style="width: 100%; text-align: left">NOME: ____________________________</div>
+                                            <br/>
+                                            <div style="width: 100%; text-align: left">ASS: ______________________________</div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            </footer>
+                            <main>
+
+                            
+                            <br/>
+                            
+
+                            <table>
+                                <tbody>
+                                    <tr>
+                                        <td style="width: 33%;">Cliente:  {{CLIENTE}}</td>
+                                        <td style="width: 33%;">Projeto:  {{PROJETO}}</td>
+                                        <td style="width: 33%;">Contrato:  {{CONTRATO}}</td>
+                                        <td style="width: 33%;">Grupo de Trabalho:  {{GRUPO}}</td>
+                                        <td style="width: 33%;">Unidade:  {{UNIDADE}}</td>
+                                    </tr>
+                                    <tr>
+                                        
+                                        <td style="width: 33%;">SOP:  {{SOP}}</td>
+                                        <td style="width: 33%;">SSOP:  {{SSOP}}</td>
+                                        <td style="width: 33%;">PPU:  {{PPU}}</td>
+                                        <td style="width: 33%;">GEP:  {{GEP}}</td>
+                                        <td style="width: 33%;">ACTIVITY ID:  {{ACTIVITY_ID}}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <br/>
+
+                            
+
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th style="width: 33%; text-align: center; margim-right: 5px">RESPONSÁVEL</th>
+                                        <th style="width: 33%; text-align: center">DISCIPLINA</th>
+                                        <th style="width: 33%; text-align: center">TAREFA</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td style="width: 25%;">{{RESPONSAVEL}}</td>
+                                        <td style="width: 25%;">{{DISCIPLINA}}</td>
+                                        <td style="width: 25%;">'.$TAREFA.'</td>
+                                    </tr>
+                                    
+                                </tbody>
+                            </table>
+                            <br/>';
+
+                        //VERIFICA SE TEM MATERIAL, SE NAO TIVER A LINHA NAO APARECE   --------------------------
+                                    
+
+                                //EXTRAIR DADOS PARA EXIBIR MATERIAIS
+                                $ultimos_digitos = substr($FOLHA_TAREFA, -2);
+
+
+                                $GetDados4 = "SELECT * FROM materiais_ftos WHERE NO_FT = '$FOLHA_TAREFA' ";
+                                $GetDadosquery4 = mysqli_query($conecta, $GetDados4) or die("Não foi possível conectar.". mysqli_error($conecta));
+                                $row4 = mysqli_num_rows($GetDadosquery4);
+
+                                if ($row4 > 0) {
+
+                                    $modelo_html1 .= '
+                                                    <table>
+                                                        <thead>
+                                                            <tr>
+                                                                <th style="width: 20%; text-align: center; margin-right: 5px">CODIGO</th>
+                                                                <th style="width: 60%; text-align: center">MATERIAL DE APLICAÇÃO</th>
+                                                                <th style="width: 10%; text-align: center">QTD</th>
+                                                                <th style="width: 10%; text-align: center">UND</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>';
+                                                        
+                                    while ($DadosMateriaisFTOs = mysqli_fetch_array($GetDadosquery4)) {
+
+                                        $CodigoMaterial = $DadosMateriaisFTOs['COD_MATERIAL'];
+                                        $DescricaoMaterial = $DadosMateriaisFTOs['DESCRICAO_MATERIAL'];
+                                        $QtdMaterial = $DadosMateriaisFTOs['PESO'];
+                                        $UndMaterial = $DadosMateriaisFTOs['UNIDADE'];
+                                    
+                                        $modelo_html1 .= '
+                                            <tr style="border-top-color: rgb(133,135,150);">
+                                                <td style="text-align: left">' . $CodigoMaterial . '</td>
+                                                <td style="padding-left: 10px">' . $DescricaoMaterial . '</td>
+                                                <td style="text-align: center">' . str_replace(".", ",", $QtdMaterial) . '</td>
+                                                <td style="text-align: center">' . $UndMaterial . '</td>
+                                            </tr>
+                                        ';
+                                    }
+                                }
+                                    //}
+
+                            
+
+    // Instancia o gerador de código de barras
+    $generator = new BarcodeGeneratorPNG();
+
+    // O texto que será codificado no código de barras
+    $texto = $FOLHA_TAREFA;
+
+    // Caminho completo para a pasta onde você deseja salvar o arquivo
+    $caminho_da_pasta = 'codigos/';
+    $caminho_pdf = '../vendor/dompdf/dompdf/src/Image/';
+
+    // Caminho completo para o arquivo onde você deseja salvar o código de barras
+    $caminho_do_arquivo = $caminho_da_pasta . $FOLHA_TAREFA.'.png';
+    $caminho_gerar_pdf = $caminho_pdf . $FOLHA_TAREFA.'.png';        
+
+    // Gera o código de barras PNG
+    $barcode = $generator->getBarcode($texto, $generator::TYPE_CODE_128);
+
+    // Salva o código de barras em um arq$uivo
+    file_put_contents($caminho_do_arquivo, $barcode);
+    file_put_contents($caminho_gerar_pdf, $barcode);
+
+    //echo 'Código de barras gerado com sucesso!';
+
+    $modelo_html1 .= '</tbody>
+                </table>
+                <br/>';
+
+    // Defina o rodapé
+    $modelo_html1 .= '
+        </main>
+        </body>
+        </html>
+    ';
+
+    $SMA = str_replace('FTO','SMA',$FOLHA_TAREFA);
+
+    // Substituir os marcadores de posição pelos dados dinâmicos
+        $modelo_html1 = str_replace('{{FTO}}', $SMA, $modelo_html1);
+        $modelo_html1 = str_replace('{{CLIENTE}}', $CLIENTE, $modelo_html1);
+        $modelo_html1 = str_replace('{{PROJETO}}', $PROJETO, $modelo_html1);
+        $modelo_html1 = str_replace('{{CONTRATO}}', $CONTRATO, $modelo_html1);
+        $modelo_html1 = str_replace('{{GRUPO}}', "PLANO 45", $modelo_html1);
+        $modelo_html1 = str_replace('{{UNIDADE}}', $UNIDADE, $modelo_html1);
+        $modelo_html1 = str_replace('{{SOP}}', $SOP, $modelo_html1);
+        $modelo_html1 = str_replace('{{SSOP}}', $SSOP, $modelo_html1);
+        $modelo_html1 = str_replace('{{PPU}}', $PPU, $modelo_html1);
+       
+        $modelo_html1 = str_replace('{{RESPONSAVEL}}', $RESPONSAVEL, $modelo_html1);
+        $modelo_html1 = str_replace('{{DISCIPLINA}}', $DISCIPLINA, $modelo_html1);
+
+        $modelo_html1 = str_replace('{{GEP}}', $GEP, $modelo_html1);
+        $modelo_html1 = str_replace('{{ACTIVITY_ID}}', $ACTIVITY_ID, $modelo_html1);
+
+        // Carregue o HTML no Dompdf
+        $dompdf->loadHtml($modelo_html1);
+
+        // Definir o rodapé no PDF
+        $dompdf->set_option('isPhpEnabled', true); // Habilita PHP no rodapé
+        $dompdf->set_option('isHtml5ParserEnabled', true); // Habilita HTML5 no rodapé
+        $dompdf->set_option('isRemoteEnabled', true); // Habilita recursos remotos no rodapé
+        $dompdf->set_option('isJavascriptEnabled', true); // Habilita JavaScript no rodapé
+        
+        
+
+
+        // Renderize o PDF
+        $dompdf->render();
+
+        
+        // Salvar o PDF no arquivo
+        $pasta_salvar_pdf = 'sma/';
+        $nome_arquivo_pdf = $SMA.'.pdf';
+        $caminho_arquivo_pdf = $pasta_salvar_pdf . $nome_arquivo_pdf;
+
+        if (!is_dir($pasta_salvar_pdf)) {
+            mkdir($pasta_salvar_pdf, 0755, true);
+        }
+
+        file_put_contents($caminho_arquivo_pdf, $dompdf->output());
+
+
+                                                
+
+}
+
+
+
+
+
+$GetDados2 = ("SELECT * FROM ftos ");
+$GetDadosquery2 = mysqli_query($conecta, $GetDados2) or die ("Não foi possivel conectar.");
+$row2 = mysqli_num_rows ($GetDadosquery);
+
+if ($row2 > 0 ) { 
+    
+    while ($DadosFTOs = mysqli_fetch_array($GetDadosquery2)) {
+
+        $ID = $DadosFTOs['ID'];
+        $CLIENTE = $DadosFTOs['CLIENTE'];
+        $PROJETO = $DadosFTOs['PROJETO'];
+        $CONTRATO = $DadosFTOs['CONTRATO'];
+        $DISCIPLINA = $DadosFTOs['DISCIPLINA'];
+        $PPU = $DadosFTOs['PPU'];
+        $FOLHA_TAREFA = $DadosFTOs['FOLHA_TAREFA'];
+        $UNIDADE = $DadosFTOs['UNIDADE'];
+        $TAG = $DadosFTOs['TAG'];
+        $DESCRICAO = $DadosFTOs['DESCRICAO'];
+        $QTD = $DadosFTOs['QTD'];
+        $UND = $DadosFTOs['UND'];
+        $SOP = $DadosFTOs['SOP'];
+        $SSOP = $DadosFTOs['SSOP'];
+        $GRUPO_DE_TRABALHO = $DadosFTOs['GRUPO_DE_TRABALHO'];
+        $RESPONSAVEL = $DadosFTOs['RESPONSAVEL'];
+        $PREPARACAO = $DadosFTOs['PREPARACAO'];
+        $AVANCO_FT = $DadosFTOs['AVANCO_FT'];
+        $TAREFA = $DadosFTOs['TAREFA'];
+        $GEP = $DadosFTOs['GEP'];
+        $REV = $DadosFTOs['REV'];
+        $ACTIVITY_ID = $DadosFTOs['ACTIVITY_ID'];
+        $PARA = $DadosFTOs['PARA'];
+        $MATERIAL_DE_APLICACAO = $DadosFTOs['MATERIAL_DE_APLICACAO'];
+        $QTD_MATERIAL = $DadosFTOs['QTD_MATERIAL'];
+        $PESO_KG = $DadosFTOs['PESO_KG'];
+        $DOCUMENTOS = $DadosFTOs['DOCUMENTOS'];
+        $LIBERACAO_CQ_FT = $DadosFTOs['LIBERACAO_CQ_FT'];
+
+        //
+
+        if (!in_array($FOLHA_TAREFA, $folha_tarefas)) {
+            
+
+            $dompdf = new Dompdf();
+
+            
+
+            // Carrega a parte estática do HTML
+            $modelo_html1 = '
+                                <!DOCTYPE html>
+                                    <html lang="pt-br">
+                                    <head>
+                                        <meta charset="UTF-8">
+                                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                        <title>Documento PDF</title>
+                                        <style>
+                                            body {
+                                                font-family: Arial, sans-serif;
+                                                margin-top: 0cm;
+                                                margin-left: 1cm;
+                                                margin-right: 1cm;
+                                                margin-bottom: 0cm;
+                                            }
+                                            table {
+                                                width: 100%;
+                                                border-collapse: collapse;
+                                            }
+                                            th, td {
+                                                border: 1px solid #5a5a5a;
+                                                text-align: left;
+                                                padding: 4px;
+                                            }
+                                            th {
+                                                background-color: #e5e5e5;
+                                            }
+                                            
+                                            @page {
+                                                margin: 0cm 0cm;
+                                                margin-top: 10px;
+                                                margin-bottom: 100px; /* Defina a altura do rodapé aqui */
+                                            }
+                                            footer {
+                                                position: fixed; 
+                                                
+                                                bottom:  -80px; 
+                                                left: 35px; 
+                                                right:  35px;
+                                                
+
+                                                /** Extra personal styles **/
+                                                
+                                                color: white;
+                                                text-align: center;
+                                                
+                                                
+                                            
+                                            }
+                                        </style>
+                                        </style>
+                                    </head>
+                                    <body style="font-size: 9px">
+
+                                    <header>
+                                        <table>
+                                            <tbody>
+                                                <tr style="height: 100px;">
+                                                    <td style="width: 33%;">
+                                                        <img src="../vendor/dompdf/dompdf/src/Image/toyo.jpg" style="height: 70px; margin-left: 40px" />
+                                                    </td>
+                                                    <td style="width: 33%; text-align: center; font-size: 15px">
+                                                        FOLHA TAREFA<br/>
+                                                        <div style="font-size: 8px">TOTAL SUSTAINABLE ENGINEERING</div>
+                                                    </td>
+                                                    <td style="width: 33%; text-align: center">
+                                                        <div style="width: 100%; text-align: left;font-size: 12px">FT</div>
+                                                        <div style="width: 100%; text-align: center; font-size: 15px">{{FTO}}</div>
+                                                        <div style="width: 100%; text-align: left">Rev.0</div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </header>
+
+                                    <footer style="color: black;">
+                                    <table ">
+                                        <tbody>
+                                            <tr>
+                                                <td style="width: 70%;">
+                                                    <img src="../vendor/dompdf/dompdf/src/Image/'.$FOLHA_TAREFA.'.png" style="width: 60%; margin-left: 100px; height: 50px" />
+                                                    <div style="width: 100%; text-align: center">'.$FOLHA_TAREFA.'</div>
+                                                </td>
+                                                <td >
+                                                    <div style="width: 100%; text-align: left;font-size: 12px">EXECUÇÃO FOLHA TAREFA</div><br/>
+                                                    <div style="width: 100%; text-align: left">DATA:  _____/_____/_____</div>
+                                                    <br/>
+                                                    <div style="width: 100%; text-align: left">NOME: ____________________________</div>
+                                                    <br/>
+                                                    <div style="width: 100%; text-align: left">ASS: ______________________________</div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    </footer>
+                                    <main>
+
+                                    
+                                    <br/>
+                                    
+
+                                    <table>
+                                        <tbody>
+                                            <tr>
+                                                <td style="width: 33%;">Cliente:  {{CLIENTE}}</td>
+                                                <td style="width: 33%;">Projeto:  {{PROJETO}}</td>
+                                                <td style="width: 33%;">Contrato:  {{CONTRATO}}</td>
+                                                <td style="width: 33%;">Grupo de Trabalho:  {{GRUPO}}</td>
+                                                <td style="width: 33%;">Unidade:  {{UNIDADE}}</td>
+                                            </tr>
+                                            <tr>
+                                                
+                                                <td style="width: 33%;">SOP:  {{SOP}}</td>
+                                                <td style="width: 33%;">SSOP:  {{SSOP}}</td>
+                                                <td style="width: 33%;">PPU:  {{PPU}}</td>
+                                                <td style="width: 33%;">GEP:  {{GEP}}</td>
+                                                <td style="width: 33%;">ACTIVITY ID:  {{ACTIVITY_ID}}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    <br/>
+
+                                    
+
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 33%; text-align: center; margim-right: 5px">RESPONSÁVEL</th>
+                                                <th style="width: 33%; text-align: center">DISCIPLINA</th>
+                                                <th style="width: 33%; text-align: center">TAREFA</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td style="width: 25%;">{{RESPONSAVEL}}</td>
+                                                <td style="width: 25%;">{{DISCIPLINA}}</td>
+                                                <td style="width: 25%;">'.$TAREFA.'</td>
+                                            </tr>
+                                            
+                                        </tbody>
+                                    </table>
+                                    <br/>
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 33%; text-align: center">PREPARAÇÃO</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td >{{PREPARACAO}}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    <br/>
+
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 33%; text-align: center">DESCRIÇÃO</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td >{{DESCRICAO}}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    <br/>';
+
+                                // DADOS PARA EXIBIÇÃO DOS TAGs e QTDs
+                                
+                                
+            $modelo_html1 .= '  <table>
+                                    <thead>
+                                        <tr>
+                                            <th  style="width: 70%; text-align: center">TAG</th>
+                                            <th  style="width: 15%; text-align: center">QTD</th>
+                                            <th  style="width: 15%; text-align: center">UND</th>
+                                        </tr>
+                                    </thead>
+                                <tbody>';
+
+                                $GetDados3 = "SELECT * FROM ftos WHERE FOLHA_TAREFA = '$FOLHA_TAREFA' ";
+                                $GetDadosquery3 = mysqli_query($conecta, $GetDados3) or die("Não foi possível conectar.". mysqli_error($conecta));
+                                $row3 = mysqli_num_rows($GetDadosquery3);
+
+                                if ($row3 > 0) {
+                                    while ($DadosFTOsTAG = mysqli_fetch_array($GetDadosquery3)) {
+                                        $TAG_FTO = $DadosFTOsTAG['TAG'];
+                                        $QTD_FTO = $DadosFTOsTAG['QTD'];
+                                        $UND_MEDIDA_FTO = $DadosFTOsTAG['UND'];
+                                    
+                                        $modelo_html1 .= '
+                                            <tr style="border-top-color: rgb(133,135,150);">
+                                                <td style="text-align: left">' . $TAG_FTO . '</td>
+                                                <td style="text-align: center">' . str_replace(".", ",", $QTD_FTO) . '</td>
+                                                <td style="text-align: center">' . $UND_MEDIDA_FTO . '</td>
+                                            </tr>
+                                        ';
+                                    }
+                                }
+
+                                    
+                                /*
+
+                                    // Inicializa o contador de itens
+                                    $item_count = 0;
+                                    
+                                    // Organiza os dados por célula
+                                    $dados_por_celula = array_fill(0, 4, array());
+                                    
+                                    foreach ($dados as $item) {
+                                        if ($FOLHA_TAREFA == $item[6]) {
+                                            $dados_por_celula[$item_count % 4][] = $item[8];
+                                            $item_count++;
+                                        }
+                                    }
+                                    
+                                    // Encontra o número máximo de itens em uma coluna
+                                    $max_itens_coluna = max(array_map('count', $dados_por_celula));
+                                    
+                                    // Loop para adicionar linhas à tabela
+                                    for ($row = 0; $row < $max_itens_coluna; $row++) {
+                                        $modelo_html1 .= '<tr>';
+                                    
+                                        // Loop através das células da tabela
+                                        for ($col = 0; $col < 4; $col++) {
+                                            $modelo_html1 .= '<td>';
+                                    
+                                            // Adiciona o item à célula da tabela, se existir
+                                            if (isset($dados_por_celula[$col][$row])) {
+                                                $modelo_html1 .= '<div>' . $dados_por_celula[$col][$row] . '</div>';
+                                            }
+                                    
+                                            $modelo_html1 .= '</td>';
+                                        }
+                                    
+                                        $modelo_html1 .= '</tr>';
+                                    }
+                                    
+                                    $modelo_html1 .= '</tbody></table>';
+
+                                */
+
+
+
+                                //VERIFICA SE TEM MATERIAL, SE NAO TIVER A LINHA NAO APARECE   --------------------------
+                                            
+
+                                        //EXTRAIR DADOS PARA EXIBIR MATERIAIS
+
+                                        $ultimos_digitos = substr($FOLHA_TAREFA, -2);
+
+                                    
+
+                                            //if($ultimos_digitos == '00' || $ultimos_digitos == '01'){
+
+
+                                                
+
+                                                $GetDados4 = "SELECT * FROM materiais_ftos WHERE NO_FT = '$FOLHA_TAREFA' ";
+                                                $GetDadosquery4 = mysqli_query($conecta, $GetDados4) or die("Não foi possível conectar.". mysqli_error($conecta));
+                                                $row4 = mysqli_num_rows($GetDadosquery4);
+
+                                                if ($row4 > 0) {
+
+                                                    $modelo_html1 .= '
+                                                                        </tbody>
+                                                                    </table>
+                                                                    <br/>
+                                                                    <table>
+                                                                        <thead>
+                                                                            <tr>
+                                                                                <th style="width: 20%; text-align: center; margin-right: 5px">CODIGO</th>
+                                                                                <th style="width: 60%; text-align: center">MATERIAL DE APLICAÇÃO</th>
+                                                                                <th style="width: 10%; text-align: center">QTD</th>
+                                                                                <th style="width: 10%; text-align: center">UND</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>';
+                                                                        
+                                                    while ($DadosMateriaisFTOs = mysqli_fetch_array($GetDadosquery4)) {
+
+                                                        $CodigoMaterial = $DadosMateriaisFTOs['COD_MATERIAL'];
+                                                        $DescricaoMaterial = $DadosMateriaisFTOs['DESCRICAO_MATERIAL'];
+                                                        $QtdMaterial = $DadosMateriaisFTOs['PESO'];
+                                                        $UndMaterial = $DadosMateriaisFTOs['UNIDADE'];
+
+                                                        // Exemplo de uso
+                                                        $dados = array(
+                                                            'FOLHA_TAREFA' => $FOLHA_TAREFA,
+                                                            'CLIENTE' => $CLIENTE,
+                                                            'PROJETO' => $PROJETO,
+                                                            'CONTRATO' => $CONTRATO,
+                                                            'UNIDADE' => $UNIDADE,
+                                                            'SOP' =>  $SOP,
+                                                            'SSOP' => $SSOP,
+                                                            'PPU' => $PPU,
+                                                            'GEP' => $GEP,
+                                                            'ACTIVITY_ID' => $ACTIVITY_ID,
+                                                            'RESPONSAVEL' => $RESPONSAVEL,
+                                                            'DISCIPLINA' => $DISCIPLINA,
+                                                            'TAREFA' => $TAREFA
+                                                        );
+
+                                                        gerarSMA($dados, $conecta);
+
+
+                                                        //gerarSMA($FOLHA_TAREFA, $conecta);
+                                                    
+                                                        $modelo_html1 .= '
+                                                            <tr style="border-top-color: rgb(133,135,150);">
+                                                                <td style="text-align: left">' . $CodigoMaterial . '</td>
+                                                                <td style="padding-left: 10px">' . $DescricaoMaterial . '</td>
+                                                                <td style="text-align: center">' . str_replace(".", ",", $QtdMaterial) . '</td>
+                                                                <td style="text-align: center">' . $UndMaterial . '</td>
+                                                            </tr>
+                                                        ';
+                                                    }
+                                                }
+                                            //}
+
+                                        /*
+
+                                                // Verifica se os dados foram encontrados e exibe a tabela secundária se necessário
+                                                if ($dados_encontrados) {
+
+                                                    
+
+                                                    $folha = "{{folha}}";
+
+                                                    // Aqui começa o loop para adicionar linhas dinâmicas à tabela secundária
+                                                    foreach ($dadosM as $linha) {
+                                                        // Verifica se o valor desejado está presente na segunda coluna (índice 1)
+                                                        if (in_array($FOLHA_TAREFA, $linha)) {
+                                                            // Adiciona uma linha à tabela secundária para cada iteração do loop
+                                                            $modelo_html1 .= '
+                                                                <tr style="border-top-color: rgb(133,135,150);">
+                                                                    <td style="text-align: left">' . $linha[1] . '</td>
+                                                                    <td style="padding-left: 10px">' . $linha[2] . '</td>
+                                                                    <td style="text-align: center">' . $linha[5] . '</td>
+                                                                    <td style="text-align: center">' . $linha[6] . '</td>
+                                                                </tr>
+                                                            ';
+                                                        }
+                                                    }   
+                                                }
+                                            }
+
+                                            */
+
+            // Instancia o gerador de código de barras
+            $generator = new BarcodeGeneratorPNG();
+
+            // O texto que será codificado no código de barras
+            $texto = $FOLHA_TAREFA;
+
+            // Caminho completo para a pasta onde você deseja salvar o arquivo
+            $caminho_da_pasta = 'codigos/';
+            $caminho_pdf = '../vendor/dompdf/dompdf/src/Image/';
+
+            // Caminho completo para o arquivo onde você deseja salvar o código de barras
+            $caminho_do_arquivo = $caminho_da_pasta . $FOLHA_TAREFA.'.png';
+            $caminho_gerar_pdf = $caminho_pdf . $FOLHA_TAREFA.'.png';        
+
+            // Gera o código de barras PNG
+            $barcode = $generator->getBarcode($texto, $generator::TYPE_CODE_128);
+
+            // Salva o código de barras em um arq$uivo
+            file_put_contents($caminho_do_arquivo, $barcode);
+            file_put_contents($caminho_gerar_pdf, $barcode);
+
+            //echo 'Código de barras gerado com sucesso!';
+
+                                            $modelo_html1 .= '</tbody>
+                                                        </table>
+                                                        <br/>';
+
+                                            if ( $DOCUMENTOS != "N/A") {       
+
+                                                $modelo_html1 .= '
+                                                                        <table>
+                                                                            <thead>
+                                                                                <tr>
+                                                                                    <th style="width: 33%; text-align: center">DOCUMENTOS DE REFERENCIA</th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                <tr>
+                                                                                    <td >
+                                                                                        {{DOCUMENTOS}}
+                                                                                    </td>
+                                                                                    
+                                                                                </tr>
+                                                                            </tbody>
+                                                                        </table>
+                                                                        <br/>';
+
+                                                                                                }
+
+                                                            $modelo_html1 .= '<table>
+                                                                                        <thead>
+                                                                                            <tr>
+                                                                                                <th style=" text-align: center" colspan="4">IMPEDIMENTOS</th>
+                                                                                                <th style=" text-align: center" colspan="2">ORIGEM</th>
+                                                                                            </tr>
+                                                                                        </thead>
+                                                                                        <tbody>
+                                                                                            <tr>
+                                                                                                <td > <input type="checkbox" style="height: 15px" /> ANDAIMES </td>
+                                                                                                <td > <input type="checkbox" style="height: 15px"/> MATERIAL </td>
+                                                                                                <td > <input type="checkbox" style="height: 15px"/> ENGENHARIA </td>
+                                                                                                <td > OUTROS: _________________________________________________ </td>
+                                                                                                <td > <input type="checkbox" style="height: 15px" /> PB </td>
+                                                                                                <td > <input type="checkbox" style="height: 15px"/> TSE </td>
+                                                                                                
+                                                                                            </tr>
+                                                                                        </tbody>
+                                                                                        <tfoot>
+                                                                                            <tr>
+                                                                                                <td COLSPAN="6">** DETALHAR IMPEDIMENTO NO VERSO</td>
+                                                                                            
+                                                                                            </tr>
+                                                                                        </tfoot>
+                                                                                    </table>
+                                                                                    <br/>
+                                                                                    ';
+
+
+                                                                                // Defina o rodapé
+                                                                                $modelo_html1 .= '
+                                                                                    </main>
+                                                                                    </body>
+                                                                                    </html>
+                                                                                ';
+
+                                                                                // Substituir os marcadores de posição pelos dados dinâmicos
+                                                                                    $modelo_html1 = str_replace('{{FTO}}', $FOLHA_TAREFA, $modelo_html1);
+                                                                                    $modelo_html1 = str_replace('{{CLIENTE}}', $CLIENTE, $modelo_html1);
+                                                                                    $modelo_html1 = str_replace('{{PROJETO}}', $PROJETO, $modelo_html1);
+                                                                                    $modelo_html1 = str_replace('{{CONTRATO}}', $CONTRATO, $modelo_html1);
+                                                                                    $modelo_html1 = str_replace('{{GRUPO}}', "PLANO 45", $modelo_html1);
+                                                                                    $modelo_html1 = str_replace('{{UNIDADE}}', $UNIDADE, $modelo_html1);
+                                                                                    $modelo_html1 = str_replace('{{SOP}}', $SOP, $modelo_html1);
+                                                                                    $modelo_html1 = str_replace('{{SSOP}}', $SSOP, $modelo_html1);
+                                                                                    $modelo_html1 = str_replace('{{PPU}}', $PPU, $modelo_html1);
+                                                                                    $modelo_html1 = str_replace('{{DESCRICAO}}', $DESCRICAO, $modelo_html1);
+                                                                                    $modelo_html1 = str_replace('{{RESPONSAVEL}}', $RESPONSAVEL, $modelo_html1);
+                                                                                    $modelo_html1 = str_replace('{{DISCIPLINA}}', $DISCIPLINA, $modelo_html1);
+                                                                                    $modelo_html1 = str_replace('{{TURNO}}', "DEFINIR", $modelo_html1);
+                                                                                    $modelo_html1 = str_replace('{{PREPARACAO}}', $PREPARACAO, $modelo_html1);
+                                                                                    $modelo_html1 = str_replace('{{CODIGO}}', "VERIFICAR", $modelo_html1);
+
+                                                                                    // MATERIAL PROXIMO PASSO
+                                                                                    $modelo_html1 = str_replace('{{folha}}', $FOLHA_TAREFA, $modelo_html1);
+                                                                                    $modelo_html1 = str_replace('{{QTD}}', "teste", $modelo_html1);
+                                                                                    $modelo_html1 = str_replace('{{UND}}', "teste", $modelo_html1);
+
+                                                                                    $modelo_html1 = str_replace('{{DOCUMENTOS}}', $DOCUMENTOS, $modelo_html1);
+
+                                                                                    $modelo_html1 = str_replace('{{CODIGO_AVANCO}}', "teste", $modelo_html1);
+                                                                                    $modelo_html1 = str_replace('{{CODIGO_CQ}}', "teste", $modelo_html1);
+
+                                                                                    $modelo_html1 = str_replace('{{GEP}}', $GEP, $modelo_html1);
+                                                                                    $modelo_html1 = str_replace('{{ACTIVITY_ID}}', $ACTIVITY_ID, $modelo_html1);
+
+            // Carregue o HTML no Dompdf
+            $dompdf->loadHtml($modelo_html1);
+
+            // Definir o rodapé no PDF
+            $dompdf->set_option('isPhpEnabled', true); // Habilita PHP no rodapé
+            $dompdf->set_option('isHtml5ParserEnabled', true); // Habilita HTML5 no rodapé
+            $dompdf->set_option('isRemoteEnabled', true); // Habilita recursos remotos no rodapé
+            $dompdf->set_option('isJavascriptEnabled', true); // Habilita JavaScript no rodapé
+            
+            
+
+
+            // Renderize o PDF
+            $dompdf->render();
+
+            
+            // Salvar o PDF no arquivo
+            $pasta_salvar_pdf = 'folha_tarefas/';
+            $nome_arquivo_pdf = $FOLHA_TAREFA.'.pdf';
+            $caminho_arquivo_pdf = $pasta_salvar_pdf . $nome_arquivo_pdf;
+
+            if (!is_dir($pasta_salvar_pdf)) {
+                mkdir($pasta_salvar_pdf, 0755, true);
+            }
+
+            file_put_contents($caminho_arquivo_pdf, $dompdf->output());
+
+
+                                                           
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+?>
